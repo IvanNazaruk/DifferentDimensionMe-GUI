@@ -1,0 +1,4 @@
+dearpygui
+requests
+pillow
+numpy
