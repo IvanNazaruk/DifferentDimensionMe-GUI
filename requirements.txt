@@ -1,4 +1,5 @@
 dearpygui
 requests
+xdialog
 pillow
 numpy

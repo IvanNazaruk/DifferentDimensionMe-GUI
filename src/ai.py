@@ -50,7 +50,7 @@ def get_ai_image(b64_image_string: str):
         "images": [b64_image_string],
         "extra": "{\"face_rects\":[],\"version\":2,\"platform\":\"web\",\"data_report\":{\"parent_trace_id\":\"323b8a31-2487-494c-6d0e-3baabf3c608a\",\"root_channel\":\"\",\"level\":0}}"
     }
-    response = requests.post(
+    response = requests_session.post(
         url=request_url,
         headers=request_headers,
         cookies=request_cookies,
@@ -72,7 +72,7 @@ def get_ai_image(b64_image_string: str):
 
 
 def download_image(url) -> Image.Image:
-    response = requests.get(url)
+    response = requests_session.get(url)
     if response.status_code != 200:
         raise ValueError
     path: str = f'GENERATED_IMGS\\{str(uuid.uuid4())}.jpg'

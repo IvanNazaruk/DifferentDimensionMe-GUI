@@ -280,14 +280,14 @@ class AIImageManager:
 class MainWindow:
     window: int
     image_path_label: int
-    AIImagerLoader: AIImagerManager
+    AIImagerLoader: AIImageManager
     loaded_image: LoadedImage
     tooltip_image_tag: int
 
     choose_width_options = ['image width', 'self width:']
 
     def __init__(self):
-        self.AIImagerLoader = AIImagerManager()
+        self.AIImagerLoader = AIImageManager()
         self.loaded_image = None
         self.tooltip_image_tag = dpg.add_static_texture(width=1, height=1, default_value=[0, 0, 0, 0], parent=font.texture_registry)
 
