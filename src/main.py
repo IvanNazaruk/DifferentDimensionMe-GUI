@@ -1,5 +1,6 @@
 import dearpygui.dearpygui as dpg
 
+import _xdialog_fix  # noqa
 import font
 import gui
 
