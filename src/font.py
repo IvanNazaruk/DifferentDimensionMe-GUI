@@ -5,10 +5,11 @@ import sys
 
 import dearpygui.dearpygui as dpg
 
+import DearPyGui_ImageController as dpg_img
+
 font_size = 25
 default_path = './fonts/InterTight-Regular.ttf'
 
-texture_registry = None
 font_registry = None
 
 
@@ -26,12 +27,14 @@ def load() -> int:
     '''
     :return: default font
     '''
-    global texture_registry, font_registry
+    global font_registry
     if sys.platform.startswith('win'):
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(u'CompanyName.ProductName.SubProduct.VersionInformation')
     ctypes.windll.shcore.SetProcessDpiAwareness(1)
 
-    texture_registry = dpg.add_texture_registry(show=False)
+    dpg_img.set_texture_registry(dpg.add_texture_registry(show=False))
+    dpg_img.default_image_controller.max_inactive_time = 3
+    dpg_img.default_image_controller.unloading_check_sleep_time = 1
     font_registry = dpg.add_font_registry()
 
     return add_font(default_path, font_size, parent=font_registry)
