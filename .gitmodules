@@ -1,0 +1,3 @@
+[submodule "src/DearPyGui_ImageController"]
+	path = src/DearPyGui_ImageController
+	url = https://github.com/IvanNazaruk/DearPyGui-ImageController

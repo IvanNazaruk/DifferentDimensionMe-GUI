@@ -10,11 +10,9 @@ from io import BytesIO
 from typing import Callable
 
 import dearpygui.dearpygui as dpg
-import numpy as np
 from PIL import Image
 
 import ai
-import font
 
 
 class LoadedImage:
@@ -24,7 +22,7 @@ class LoadedImage:
     height: int
     base64: str
 
-    def __init__(self, path: str):
+    def __init__(self, path: str | BytesIO):
         self.path = path
         self.image = Image.open(self.path)
         self.width = self.image.width
@@ -165,12 +163,13 @@ class RequestQueue:
     @classmethod
     def append(cls,
                loaded_image: LoadedImage,
+               version: int,
                start_callback: Callable = None,
                error_callback: Callable[[str], None] = None,
                done_callback: Callable[[Image.Image], None] = None,
                ):
         cls.queue.put(
-            (loaded_image, start_callback, error_callback, done_callback)
+            (loaded_image, version, start_callback, error_callback, done_callback)
         )
 
     @classmethod
@@ -193,26 +192,27 @@ class RequestQueue:
 
     @classmethod
     def worker(cls, id: int):
-        loaded_image, start_callback, error_callback, done_callback = (None, None, None, None)
+        loaded_image, version, start_callback, error_callback, done_callback = (None, 2, None, None, None)
         while 1:
             cls.workers[id] = False
             try:
-                loaded_image, start_callback, error_callback, done_callback = cls.queue.get(timeout=1)
+                loaded_image, version, start_callback, error_callback, done_callback = cls.queue.get(timeout=1)
                 cls.workers[id] = True
                 loaded_image: LoadedImage
 
                 if start_callback:
                     start_callback()
 
-                url = ai.get_ai_image(loaded_image.base64)
-                image = ai.download_image(url)
+                url = ai.get_ai_image(loaded_image.base64, version)
+                image, filepath = ai.download_image(url)
 
                 if done_callback:
-                    done_callback(image)
+                    done_callback(image, filepath)
             except queue.Empty:
                 pass
             except Exception as e:
-                # traceback.print_exc()
+                if type(e) != KeyError:
+                    traceback.print_exc()
                 if error_callback:
                     try:
                         error_callback(str(e))
@@ -226,28 +226,6 @@ class RequestQueue:
 
 
 RequestQueue.update_workers()
-
-
-def image_to_1d_array(image: Image.Image):
-    return np.array(image.convert("RGBA"), dtype=int).ravel() / 255
-
-
-def load_image(image: Image.Image, tag: int | str = None):
-    if tag is None:
-        tag = dpg.generate_uuid()
-    if isinstance(image, LoadedImage):
-        pillow_image = LoadedImage.image
-    else:
-        pillow_image = image
-    return dpg.add_static_texture(
-        width=image.width,
-        height=image.height,
-        default_value=image_to_1d_array(pillow_image),
-        tag=tag,
-        parent=font.texture_registry,
-        user_data=str(image.filename)
-    )
-
 
 HGLOBAL = HANDLE
 SIZE_T = c_size_t
@@ -300,8 +278,3 @@ def image_to_clipboard(image: Image.Image):
     EmptyClipboard()
     SetClipboardData(CF_DIB, pData)
     CloseClipboard()
-
-
-def texture_tag_to_clipboard(texture_tag):
-    image = Image.open(dpg.get_item_user_data(texture_tag))
-    image_to_clipboard(image)

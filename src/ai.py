@@ -64,6 +64,12 @@ def get_ai_image(b64_image_string: str, version=2):
         text = json.loads(text)['extra']
         text = json.loads(text)
         text = list(set(text['img_urls']))
+    except json.decoder.JSONDecodeError:
+        print(text)
+        raise KeyError
+    except KeyError:
+        print(text)
+        raise KeyError
     except Exception:
         print(text)
         raise Exception
@@ -85,7 +91,7 @@ def crop_image(image: Image.Image) -> Image.Image:
     return cropped_image
 
 
-def download_image(url) -> Image.Image:
+def download_image(url) -> (Image.Image, str):
     response = requests_session.get(url)
     if response.status_code != 200:
         raise ValueError
@@ -96,6 +102,5 @@ def download_image(url) -> Image.Image:
         f.write(response.content)
     image = Image.open(path)
     cropped_image = crop_image(image)
-    cropped_image.filename = path
     image.close()
-    return cropped_image
+    return cropped_image, path
