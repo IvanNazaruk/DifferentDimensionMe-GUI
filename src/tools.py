@@ -204,21 +204,13 @@ class RequestQueue:
 
                 url = ai.get_ai_image(loaded_image.base64)
                 image = ai.download_image(url)
-                filename = image.filename
 
-                left = 25
-                top = 25
-                right = image.width - 25
-                bottom = image.height - 200
-                image = image.crop((left, top, right, bottom))
-
-                image.filename = filename
                 if done_callback:
                     done_callback(image)
             except queue.Empty:
                 pass
             except Exception as e:
-                traceback.print_exc()
+                # traceback.print_exc()
                 if error_callback:
                     try:
                         error_callback(str(e))

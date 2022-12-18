@@ -110,7 +110,7 @@ class AutoImageWrapper:
             )
 
 
-class AIImageViewer:
+class AIImageViewer:  # TODO: refactor this
     tag: int
     width: int
     height: int
@@ -139,7 +139,7 @@ class AIImageViewer:
 
     def get_loading_indicator_radius(self):
         radius = self.width if self.width < self.height else self.height
-        radius = radius / 25
+        radius = radius / font.font_size
         return radius
 
     def start_request(self):
@@ -181,14 +181,17 @@ class AIImageViewer:
     def done(self, image: Image.Image):
         if self.deleted:
             return
+        self.image_texture_tag = load_image(image)
+        self.image = image
+        self.height = None
+        height = self.get_height()
+        dpg.configure_item(self.parent_window, height=height)
         dpg.configure_item(self.loading_indicator,
                            color=self.StatusColors.wait_load_image)
-        self.image_texture_tag = load_image(image)
-        self.image_path = image
         self.dpg_image = dpg.add_image(
             self.image_texture_tag,
             width=self.width,
-            height=self.height,
+            height=height,
             parent=self.group
         )
         dpg.bind_item_handler_registry(self.dpg_image, self.click_handler)
@@ -208,11 +211,23 @@ class AIImageViewer:
         if self.dpg_image:
             dpg.delete_item(self.image_texture_tag)
 
-    def update_size(self, width: int, height: int):
-        self.width, self.height = width, height
-        dpg.configure_item(self.parent_window, width=self.width, height=self.height)
+    def get_height(self) -> int:
+        if self.height:
+            return self.height
+        height = self.image.height * (self.width / self.image.width)
+        height = int(height)
+        return height
+
+    def update_size(self, width: int = None, height: int = None):
+        if width is not None:
+            self.width = width
+        if height is not None:
+            self.height = height
+
+        height = self.get_height()
+        dpg.configure_item(self.parent_window, width=self.width, height=height)
         if self.dpg_image:
-            dpg.configure_item(self.dpg_image, width=self.width, height=self.height)
+            dpg.configure_item(self.dpg_image, width=self.width, height=height)
         else:
             dpg.configure_item(self.loading_indicator, radius=self.get_loading_indicator_radius())
 
@@ -220,6 +235,7 @@ class AIImageViewer:
 class AIImageManager:
     group: int
     image_wrapper: AutoImageWrapper
+    loaded_image: LoadedImage
     image_viewers_list: list[AIImageViewer]
 
     def render(self):
@@ -237,8 +253,7 @@ class AIImageManager:
 
         for image_viewer in self.image_viewers_list:
             image_viewer.delete()
-            del image_viewer
-        del self.image_viewers_list
+        self.image_viewers_list.clear()
 
         dpg.delete_item(self.group, children_only=True)
 
@@ -267,13 +282,13 @@ class AIImageManager:
             items_list.append(child_window)
         self.image_wrapper.append_items(items_list)
 
-    def update_width(self, width):
+    def update_width(self, width: int):
         if self.loaded_image is None:
             return
         self.image_wrapper.item_width = width
-        height = self.loaded_image.get_height(width=width)
+        # height = self.loaded_image.get_height(width=width)
         for image_viewer in self.image_viewers_list:
-            image_viewer.update_size(width, height)
+            image_viewer.update_size(width=width)
         self.image_wrapper.update()
 
 
@@ -303,19 +318,10 @@ class MainWindow:
         dpg.configure_item(self.start_button, enabled=False)
 
         filetypes = [
-            # JPEG
-            '*.jpg',
-            '*.jpeg',
-            '*.jfif',
-            '*.pjpeg',
-            '*.pjp',
-            # PNG
-            '*.png',
-            # BMP
-            '*.bmp',
-            # ICO
-            '.ico',
-            '.cur',
+            '*.jpg', '*.jpeg', '*.jfif', '*.pjpeg', '*.pjp',  # JPEG
+            '*.png',  # PNG
+            '*.bmp',  # BMP
+            '.ico', '.cur',  # ICO
         ]
         image_path = xdialog.open_file("Select image",
                                        filetypes=[("Image file", " ".join(filetypes)),
