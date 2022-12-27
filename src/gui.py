@@ -96,7 +96,7 @@ class AutoImageWrapper:
         self._now_count_items_in_row = -1
         self.update()
 
-    def render(self, parent=0):
+    def create(self, parent=0):
         self.resize_tag = ViewportResizeManager.add_callback(self.window_resize)
         with dpg.child_window(parent=parent, width=-1) as self.window:
             dpg.bind_item_theme(self.window, self.theme)
@@ -113,13 +113,15 @@ class AutoImageWrapper:
             )
 
 
-class AIImageViewer(dpg_img.ImageViewer):
+class AIImageViewer:
+    image_viewer: dpg_img.ImageViewer
     image_filepath: str = ''
 
     is_error: bool = False
     loaded: bool = False
 
     click_handler: int = None
+    deleted: bool = False
 
     class StatusColors:
         wait_queue = (150, 0, 200)
@@ -127,15 +129,17 @@ class AIImageViewer(dpg_img.ImageViewer):
         wait_load_image = (0, 255, 0)
         error = (255, 0, 0)
 
-    def __init__(self, loaded_image: LoadedImage, version=2):  # noqa
-        self.request_image = loaded_image
-        self.version = version
-
     @staticmethod
     def get_loading_indicator_radius(width: int, height: int):
         radius = width if width < height else height
         radius = radius / font.font_size
         return radius
+
+    def __init__(self, loaded_image: LoadedImage, version=2):
+        self.request_image = loaded_image
+        self.version = version
+
+        self.image_viewer = dpg_img.ImageViewer()
 
     def start_request(self):
         if self.deleted:
@@ -150,7 +154,7 @@ class AIImageViewer(dpg_img.ImageViewer):
                            speed=1,
                            color=self.StatusColors.wait_queue)
 
-    def render(self, width: int, height: int, parent: int | str = 0):  # noqa
+    def create(self, width: int, height: int, parent: int | str = 0):
         if self.deleted:
             return
         self.parent_window = parent
@@ -185,48 +189,63 @@ class AIImageViewer(dpg_img.ImageViewer):
                            color=self.StatusColors.wait_load_image)
 
         self.image_filepath = filepath
-        super().__init__(image,
-                         width=self.width,
-                         height=None)
+
+        self.image_viewer.load(image)
         self.loaded = True
 
-        width, height = self.get_size()
-        dpg.configure_item(self.parent_window, height=height)
-
-        super().render(parent=self.parent_window)
-        with dpg.item_handler_registry() as self.image_handler:
+        with dpg.item_handler_registry() as self.click_handler:
             dpg.add_item_clicked_handler(callback=lambda _, data: self.click(mouse_button=data[0]))
-        self.set_image_handler(self.image_handler)
+        self.image_viewer.set_image_handler(self.click_handler)
+
+        self.set_width(self.width)
+        self.image_viewer.create(parent=self.parent_window)
+
         dpg.delete_item(self.loading_indicator)
 
-    def set_size(self, *, width: int = None, height: int = None):
-        if width is not None:
-            self.width = width
-        if height is not None:
-            self.height = height
-        width, height = self.get_size()
+    def set_width(self, width: int = None):
+        if self.deleted:
+            return
+        self.width = width
         if not self.loaded:
-            height = self.request_image.height * (width / self.request_image.width)
-        dpg.configure_item(self.parent_window, width=self.width, height=height)
-        if not self.loaded:
+            if width is None:
+                width, height = self.request_image.width, self.request_image.height
+            else:
+                height = self.request_image.height * (width / self.request_image.width)
+            dpg.configure_item(self.parent_window, width=width, height=height)
             dpg.configure_item(self.loading_indicator,
                                radius=self.get_loading_indicator_radius(width, height))
         else:
-            super().set_size(width=self.width, height=self.height)
+            self.image_viewer.set_width(width)
+            width, height = self.image_viewer.get_size()
+            dpg.configure_item(self.parent_window, width=width, height=height)
 
     def click(self, mouse_button):
+        if self.deleted:
+            return
         if not self.loaded:
             return
         if mouse_button == 1:  # Right button
-            image_to_clipboard(self.info.image)
+            if self.image_viewer.info:
+                image_to_clipboard(self.image_viewer.info.image)
         else:  # Left or Middle button
             subprocess.Popen(rf'explorer /select,"{self.image_filepath}"')
 
     def delete(self):
-        if self.loaded:
-            super().delete()
-            dpg_img.HandlerDeleter.add(self.image_handler)
+        if self.deleted:
+            return
         self.deleted = True
+
+        self.image_viewer.delete()
+        self.image_viewer = None  # noqa
+        dpg_img.HandlerDeleter.add(self.click_handler)
+        self.click_handler = None  # noqa
+
+        try:
+            dpg.delete_item(self.group)
+        except Exception:
+            pass
+        finally:
+            self.group = None
 
 
 class AIImageManager:
@@ -235,12 +254,12 @@ class AIImageManager:
     loaded_image: LoadedImage
     image_viewers_list: list[AIImageViewer]
 
-    def render(self):
+    def create(self):
         self.image_viewers_list = []
         self.loaded_image = None
         self.image_wrapper = AutoImageWrapper(1_000)
         with dpg.group() as self.group:
-            self.image_wrapper.render()
+            self.image_wrapper.create()
 
     def clear(self):
         RequestQueue.clear()
@@ -259,7 +278,7 @@ class AIImageManager:
         self.image_wrapper = AutoImageWrapper(
             item_width=image_width
         )
-        self.image_wrapper.render(parent=self.group)
+        self.image_wrapper.create(parent=self.group)
         self.loaded_image = loaded_image
 
         image_height = self.loaded_image.get_height(width=image_width)
@@ -271,7 +290,7 @@ class AIImageManager:
                                   width=image_width,
                                   height=image_height) as child_window:
                 image_viewer = AIImageViewer(loaded_image, version=version)
-                image_viewer.render(width=image_width,
+                image_viewer.create(width=image_width,
                                     height=image_height,
                                     parent=child_window)
                 self.image_viewers_list.append(image_viewer)
@@ -284,7 +303,7 @@ class AIImageManager:
             return
         self.image_wrapper.item_width = width
         for image_viewer in self.image_viewers_list:
-            image_viewer.set_size(width=width)
+            image_viewer.set_width(width=width)
         self.image_wrapper.update()
 
 
@@ -307,7 +326,7 @@ class MainWindow:
             self.tooltip_image.delete()
         dpg.delete_item(self.text_tooltip, children_only=True)
         if image:
-            self.tooltip_image = dpg_img.add_image(href=image, parent=self.text_tooltip)
+            self.tooltip_image = dpg_img.add_image(image=image, parent=self.text_tooltip)
         else:
             self.tooltip_image = None
 
@@ -480,7 +499,7 @@ class MainWindow:
     def set_show_settings(self, flag: bool):
         dpg.configure_item(self.settings_group, show=flag)
 
-    def render(self):
+    def create(self):
         with dpg.window() as self.window:
             with dpg.table(resizable=False, header_row=False):
                 dpg.add_table_column(width_fixed=True)
@@ -534,4 +553,4 @@ class MainWindow:
             with dpg.handler_registry():
                 dpg.add_key_press_handler(key=-1, callback=self.check_clipboard_paste)
             threading.Thread(target=self.update_threads_info_worker, daemon=True).start()
-            self.AIImagerLoader.render()
+            self.AIImagerLoader.create()

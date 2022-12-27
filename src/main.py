@@ -5,7 +5,7 @@ import font
 import gui
 
 dpg.create_context()
-dpg.create_viewport(title='DifferentDimensionMe by @ivannazaruk', width=1000, height=800, small_icon='icon.ico', large_icon='icon.ico', clear_color=(71, 71, 72))
+dpg.create_viewport(title='DifferentDimensionMe-GUI by @ivannazaruk', width=1000, height=800, small_icon='icon.ico', large_icon='icon.ico', clear_color=(71, 71, 72))
 dpg.bind_font(font.load())
 
 with dpg.theme() as global_theme:
@@ -24,7 +24,7 @@ with dpg.theme() as global_theme:
 dpg.bind_theme(global_theme)
 
 MainWindow = gui.MainWindow()
-MainWindow.render()
+MainWindow.create()
 
 dpg.set_primary_window(MainWindow.window, True)
 
