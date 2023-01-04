@@ -225,8 +225,8 @@ class AIImageViewer:
         if not self.loaded:
             return
         if mouse_button == 1:  # Right button
-            if self.image_viewer.info:
-                image_to_clipboard(self.image_viewer.info.image)
+            if self.image_viewer.image:
+                image_to_clipboard(self.image_viewer.image)
         else:  # Left or Middle button
             subprocess.Popen(rf'explorer /select,"{self.image_filepath}"')
 
@@ -319,16 +319,10 @@ class MainWindow:
     def __init__(self):
         self.AIImagerLoader = AIImageManager()
         self.loaded_image = None
-        self.tooltip_image = None
+        self.tooltip_image = dpg_img.ImageViewer(unload_width=1, unload_height=1)
 
     def set_tooltip_image(self, image: Image.Image | None = None):
-        if self.tooltip_image is not None:
-            self.tooltip_image.delete()
-        dpg.delete_item(self.text_tooltip, children_only=True)
-        if image:
-            self.tooltip_image = dpg_img.add_image(image=image, parent=self.text_tooltip)
-        else:
-            self.tooltip_image = None
+        self.tooltip_image.load(image)
 
     @dpg_callback()
     def open_image_file(self):
@@ -516,7 +510,7 @@ class MainWindow:
                     with dpg.group():
                         self.image_path_label = dpg.add_text('')
                         with dpg.tooltip(self.image_path_label) as self.text_tooltip:
-                            pass
+                            self.tooltip_image.create()
                     with dpg.group(horizontal=True):
                         dpg.add_text('AI version:')
                         self.ai_version_input = dpg.add_input_int(default_value=2, width=25, step=0)

@@ -33,8 +33,8 @@ def load() -> int:
     ctypes.windll.shcore.SetProcessDpiAwareness(1)
 
     dpg_img.set_texture_registry(dpg.add_texture_registry(show=False))
-    dpg_img.default_image_controller.max_inactive_time = 3
-    dpg_img.default_image_controller.unloading_check_sleep_time = 1
+    dpg_img.default_controller.max_inactive_time = 3
+    dpg_img.default_controller.unloading_check_sleep_time = 1
     font_registry = dpg.add_font_registry()
 
     return add_font(default_path, font_size, parent=font_registry)
