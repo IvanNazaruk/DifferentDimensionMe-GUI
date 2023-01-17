@@ -60,7 +60,19 @@ def get_ai_image(b64_image_string: str, version=2):
     )
 
     text = response.text
+    print(text)
     try:
+        if response.status_code == 404:
+            return None
+        if response.status_code == 200 and json.loads(text)['code'] == 0:
+            pass  # ok
+        if response.status_code == 200 and json.loads(text)['code'] == 1001:
+            error = json.loads(text)['msg'][2:-1]
+            print(error)
+            return None
+        if response.status_code == 200 and json.loads(text)['code'] == 2119:
+            print(json.loads(text)['code'], json.loads(text)['msg'])
+            return None
         text = json.loads(text)['extra']
         text = json.loads(text)
         text = list(set(text['img_urls']))

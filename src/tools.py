@@ -204,6 +204,8 @@ class RequestQueue:
                     start_callback()
 
                 url = ai.get_ai_image(loaded_image.base64, version)
+                if url is None:
+                    break
                 image, filepath = ai.download_image(url)
 
                 if done_callback:
