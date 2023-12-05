@@ -30,7 +30,7 @@ def _get_x_sign_value(request_json):
 def get_ai_image(b64_image_string: str, version=2):
     request_url = "https://ai.tu.qq.com/trpc.shadow_cv.ai_processor_cgi.AIProcessorCgi/Process"
     request_json = {
-        "busiId": "different_dimension_me_img_entry",
+        "busiId": "ai_painting_anime_img_entry",
         "images": [b64_image_string],
         "extra": '{\"face_rects\":[],\"version\":' + f'{version}' + ',\"platform\":\"web\",\"data_report\":{\"parent_trace_id\":\"' + f'{uuid.uuid4()}' + '\", \"root_channel\":\"\",\"level\":0}}'
     }
